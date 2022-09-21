@@ -13,6 +13,9 @@ import { getFeatureFlag, AUDIO_FOCUS_DISABLED } from '../../base/flags';
 import { MiddlewareRegistry } from '../../base/redux';
 
 import { _SET_AUDIOMODE_DEVICES, _SET_AUDIOMODE_SUBSCRIPTIONS } from './actionTypes';
+import {
+    getStartWithVideoMuted,
+} from '../../base/media';
 import logger from './logger';
 
 const { AudioMode } = NativeModules;
@@ -138,12 +141,19 @@ function _updateAudioMode({ getState }, next, action) {
     const state = getState();
     const conference = getCurrentConference(state);
     const { enabled: audioOnly } = state['features/base/audio-only'];
+    const hasVideo = !getStartWithVideoMuted(state);
     let mode;
 
-    if (getFeatureFlag(state, AUDIO_FOCUS_DISABLED, false)) {
-        return result;
-    } else if (conference) {
-        mode = audioOnly ? AudioMode.AUDIO_CALL : AudioMode.VIDEO_CALL;
+    if (getFeatureFlag(state, AUDIO_FOCUS_DISABLED, false) || conference) {
+        if (audioOnly) {
+            mode = AudioMode.AUDIO_CALL;
+        } else {
+            if (hasVideo) {
+                mode = AudioMode.VIDEO_CALL;
+            } else {
+                mode = AudioMode.AUDIO_CALL;
+            }
+        }
     } else {
         mode = AudioMode.DEFAULT;
     }
